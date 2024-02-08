@@ -1,0 +1,13 @@
+node_modules
+src/configs/database/seeds
+src/api/media
+dist
+
+logs
+.env
+.env.production
+.env.development
+*.log
+*.txt
+
+tmp
