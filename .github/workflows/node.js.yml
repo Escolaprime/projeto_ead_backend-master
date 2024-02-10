@@ -33,5 +33,5 @@ jobs:
         
     - run: yarn
     - run: yarn build
-    - run: cd /home/escolaprime/actions-runner-backend-admin/_work/Escola-Prime/Escola-Prime
+    - run: cd /home/escolaprime/actions-runner-backend-admin/_work/projeto_ead_backend-master/projeto_ead_backend-master
     - run: pm2 restart 0
