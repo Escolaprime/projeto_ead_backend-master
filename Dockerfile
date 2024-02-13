@@ -1,16 +1,18 @@
-FROM node:16.12-slim
+FROM node:16.16
 
-WORKDIR /app
+RUN apt update && apt install -y --no-install-recommends \
+  git \
+  ca-certificates
 
-COPY package.json ./
 
-RUN npm install
+WORKDIR /home/node/app
 
+COPY package*.json ./
 COPY . .
 
-RUN npm run build 
-
-RUN export NODE_ENV=production
 EXPOSE 3003
 
-CMD [ "npm", "run", "start" ]
+RUN yarn 
+RUN yarn build
+
+CMD [ "sh", "-c", "yarn start" ]
