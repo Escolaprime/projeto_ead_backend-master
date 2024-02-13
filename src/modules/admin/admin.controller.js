@@ -1,9 +1,9 @@
-import { removeFile, streamFile } from "@shared/providers/fs/fs";
-import { MEDIA_PATH, NODE_ENV } from "@shared/utils/enviroments";
 import db from "@shared/database/knex";
 import { AppError } from "@shared/errors/AppError";
-import { loggerAudit } from "@shared/providers/logger";
 import { downloadFileFromBucket } from "@shared/providers/Supabase/Storage";
+import { removeFile, streamFile } from "@shared/providers/fs/fs";
+import { loggerAudit } from "@shared/providers/logger";
+import { MEDIA_PATH, NODE_ENV } from "@shared/utils/enviroments";
 
 export class AdminController {
   adminService;
@@ -362,13 +362,13 @@ export class AdminController {
       hash_video_id,
     });
 
-    const { url, mime_type, tamanho: size } = rows;
+    const { url, mime_type, tamanho: size, titulo } = rows;
 
     const CHUNK_SIZE = 12 ** 6; // 1MB
     let start = Number(range.replace(/\D/g, ""));
     let end = Math.min(start + CHUNK_SIZE, size - 1);
     let contentLength = end - start + 1;
-    console.log(contentLength)
+
     const headers = {
       "Content-Range": `bytes ${start}-${end}/${size}`,
       "Accept-Ranges": "bytes",
@@ -380,10 +380,13 @@ export class AdminController {
 
     res.writeHead(206, headers);
     const path = NODE_ENV === "production" ? MEDIA_PATH : "./tmp/videos";
-    // await downloadFileFromBucket({ fileName: '1627854650957_rosana-entrevista-aula04.mp4', path: `${path}/${url}` })
-    await downloadFileFromBucket({ fileName: '1627854650957_rosana-entrevista-aula04.mp4', path: `${path}/${'1627854650957_rosana-entrevista-aula04.mp4'}` })
-    // const stream = streamFile(`${path}/${url}`, { start, end });
-    const stream = streamFile(`${path}/${'1627854650957_rosana-entrevista-aula04.mp4'}`, { start, end });
+    await downloadFileFromBucket({ fileName: url, path: `${path}/${url}` });
+    const stream = streamFile(`${path}/${url}`, { start, end });
+    stream.on("end", () => {
+      if (end === size - 1) {
+        return removeFile(`${path}/${url}`);
+      }
+    });
     return stream.pipe(res);
   }
 

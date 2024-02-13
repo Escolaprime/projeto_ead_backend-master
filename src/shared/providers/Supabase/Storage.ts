@@ -21,8 +21,6 @@ export async function UploadFileToBucket({ file, fileName }: UploadParams) {
 }
 
 export async function downloadFileFromBucket({ fileName, path }: downloadParams) {
-  console.log(fileName)
-  console.log(STORAGE_NAME_BUCKET)
   const read = existsSync(path)
   console.log(read)
   if (read) {
@@ -35,6 +33,9 @@ export async function downloadFileFromBucket({ fileName, path }: downloadParams)
   }
   const arrayBuffer = await data.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
+  if (path.split('.mp4').length === 0) {
+    return writeFile(`${path}.mp4`, buffer)
+  }
   await writeFile(path, buffer)
 }
 

@@ -9,6 +9,5 @@ logs
 .env.development
 *.log
 *.txt
-tsconfig.tsbuildinfo
 
 tmp
