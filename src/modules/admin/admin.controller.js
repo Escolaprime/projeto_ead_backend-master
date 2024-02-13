@@ -3,6 +3,7 @@ import { MEDIA_PATH, NODE_ENV } from "@shared/utils/enviroments";
 import db from "@shared/database/knex";
 import { AppError } from "@shared/errors/AppError";
 import { loggerAudit } from "@shared/providers/logger";
+import { downloadFileFromBucket } from "@shared/providers/Supabase/Storage";
 
 export class AdminController {
   adminService;
@@ -367,6 +368,7 @@ export class AdminController {
     let start = Number(range.replace(/\D/g, ""));
     let end = Math.min(start + CHUNK_SIZE, size - 1);
     let contentLength = end - start + 1;
+    console.log(contentLength)
     const headers = {
       "Content-Range": `bytes ${start}-${end}/${size}`,
       "Accept-Ranges": "bytes",
@@ -378,7 +380,10 @@ export class AdminController {
 
     res.writeHead(206, headers);
     const path = NODE_ENV === "production" ? MEDIA_PATH : "./tmp/videos";
-    const stream = streamFile(`${path}/${url}`, { start, end });
+    // await downloadFileFromBucket({ fileName: '1627854650957_rosana-entrevista-aula04.mp4', path: `${path}/${url}` })
+    await downloadFileFromBucket({ fileName: '1627854650957_rosana-entrevista-aula04.mp4', path: `${path}/${'1627854650957_rosana-entrevista-aula04.mp4'}` })
+    // const stream = streamFile(`${path}/${url}`, { start, end });
+    const stream = streamFile(`${path}/${'1627854650957_rosana-entrevista-aula04.mp4'}`, { start, end });
     return stream.pipe(res);
   }
 

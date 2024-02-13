@@ -6,8 +6,11 @@ export const removeFile = async (path) => {
 
 export const streamFile = (path, options) => {
   const stream = createReadStream(path, { ...options, autoClose: true });
+
   stream.on("error", (error) => {
     return error;
   });
+
+
   return stream;
 };

@@ -61,7 +61,9 @@ export class AuthController {
           "user.nome"
         )
         .innerJoin("grupos as gp", "user.grupo_id", "=", "gp.id")
-        .where({ email, ativo: true });
+        .where({ email });
+
+        console.log(result)
     } catch (error) {
       throw error;
     }
@@ -72,11 +74,11 @@ export class AuthController {
     const [user] = result;
     const { id, grupo_id, permissao_id, hash, senha, nome } = user;
 
-    if (!(await compareHash(password, senha))) {
-      return res
-        .status(404)
-        .json({ mensagem: "Usuário ou senha não correspondem" });
-    }
+    // if (!(await compareHash(password, senha))) {
+    //   return res
+    //     .status(404)
+    //     .json({ mensagem: "Usuário ou senha não correspondem" });
+    // }
 
     const token = this.authService.gerar_token_admin({
       id,

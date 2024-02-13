@@ -4,6 +4,7 @@ import { generateHash } from "@shared/providers/hash";
 import { MEDIA_PATH, NODE_ENV } from "@shared/utils/enviroments";
 import db from "@shared/database/knex";
 import { loggerAudit } from "@shared/providers/logger";
+import { UploadFileToBucket } from "@shared/providers/Supabase/Storage";
 
 export class VideoController {
   videoService;
@@ -12,6 +13,7 @@ export class VideoController {
   }
 
   async streaming_video(req, res) {
+
     const range = req.headers.range;
     const { hash: hash_video_id } = req.query;
     if (!range) {
@@ -184,14 +186,14 @@ export class VideoController {
 
   async upload_video(req, res) {
     const { filename: url, mimetype: mime_type, size: tamanho } = req.file;
-
+    console.log(req.file)
     const { detalhes } = req.body;
-
+   
     const timestamp = new Date().getTime().toString();
     const toObj = JSON.parse(detalhes);
     const hash_video_id = await generateHash(timestamp, 5);
-
     try {
+      await UploadFileToBucket(url, req.file)
       await db.table("videos").insert({
         ...toObj,
         url,

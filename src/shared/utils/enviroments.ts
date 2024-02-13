@@ -12,3 +12,6 @@ export const { MEDIA_PATH } = process.env;
 export const { NODE_ENV } = process.env;
 
 export const { PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
+
+
+export const { STORAGE_URL,  STORAGE_TOKEN, STORAGE_NAME_BUCKET } = process.env
