@@ -1,7 +1,8 @@
-import { verifyToken } from "@shared/providers/token";
 import db from "@shared/database/knex";
 import { AppError } from "@shared/errors/AppError";
 import { compareHash } from "@shared/providers/hash";
+import { verifyToken } from "@shared/providers/token";
+
 export class AuthController {
   authService;
   relatorioService;
@@ -61,9 +62,7 @@ export class AuthController {
           "user.nome"
         )
         .innerJoin("grupos as gp", "user.grupo_id", "=", "gp.id")
-        .where({ email });
-
-        console.log(result)
+        .where({ email, ativo: true });
     } catch (error) {
       throw error;
     }
@@ -74,11 +73,11 @@ export class AuthController {
     const [user] = result;
     const { id, grupo_id, permissao_id, hash, senha, nome } = user;
 
-    // if (!(await compareHash(password, senha))) {
-    //   return res
-    //     .status(404)
-    //     .json({ mensagem: "Usuário ou senha não correspondem" });
-    // }
+    if (!(await compareHash(password, senha))) {
+      return res
+        .status(404)
+        .json({ mensagem: "Usuário ou senha não correspondem" });
+    }
 
     const token = this.authService.gerar_token_admin({
       id,
