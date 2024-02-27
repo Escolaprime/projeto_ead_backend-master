@@ -1,7 +1,6 @@
-import type { Knex } from "knex";
 import { config as envConfig } from "dotenv";
+import type { Knex } from "knex";
 
-console.log({ path: `${process.cwd()}/../.env` })
 envConfig({ path: `${process.cwd()}/../.env` });
 const config: { [key: string]: Knex.Config } = {
   development: {

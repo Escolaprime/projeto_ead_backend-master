@@ -1,11 +1,10 @@
 import db from "@shared/database/knex";
 import { AppError } from "@shared/errors/AppError";
-import { removeFile } from "@shared/providers/fs/fs";
-import { MEDIA_PATH } from "@shared/utils/enviroments";
+import { removeVideo } from "@shared/providers/Supabase/Storage";
 import logger from "@shared/utils/logger";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
 import tz from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
 
 dayjs.extend(utc);
 dayjs.extend(tz);
@@ -42,7 +41,7 @@ export class VideoService {
 
   async deletarVideo(video) {
     try {
-      await removeFile(`${MEDIA_PATH}${video.path}`);
+      await removeVideo(video.url);
       return await db.table("videos").del().where({ id: video.id });
     } catch (error) {
       logger.error(error);
