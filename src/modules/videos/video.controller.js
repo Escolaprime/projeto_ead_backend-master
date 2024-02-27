@@ -195,15 +195,10 @@ export class VideoController {
 
   async upload_video(req, res) {
     const { filename: url, mimetype: mime_type, size: tamanho } = req.file;
-    const { detalhes } = req.body;
-
     const timestamp = new Date().getTime().toString();
-    const toObj = JSON.parse(detalhes);
     const hash_video_id = await generateHash(timestamp, 5);
-    const path = NODE_ENV === "production" ? MEDIA_PATH : "./tmp/videos";
     try {
-      await UploadFileToBucket({ fileName: url, file: req.file });
-      await removeFile(`${path}/${url}`);
+      await UploadFileToBucket({ file: req.file });
       await db.table("videos").insert({
         ...toObj,
         url,
@@ -213,7 +208,7 @@ export class VideoController {
       });
       return res.json({ mensagem: "Video postado com sucesso" });
     } catch (error) {
-      await removeFile(`${path}/${url}`);
+      console.log(error);
       throw error;
     }
   }

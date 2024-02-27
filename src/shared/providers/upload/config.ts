@@ -8,7 +8,7 @@ export const uploadConfig: Options = {
   dest: DESTINATION,
   storage: diskStorage({
     destination: DESTINATION,
-    filename,
+    filename, 
   }),
   fileFilter,
 };
