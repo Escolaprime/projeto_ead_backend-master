@@ -3,11 +3,10 @@ import { AppError } from "@shared/errors/AppError";
 import {
   UploadFileToBucket,
   downloadFileFromBucket,
+  getVideoStream,
 } from "@shared/providers/Supabase/Storage";
-import { removeFile, streamFile } from "@shared/providers/fs/fs";
 import { generateHash } from "@shared/providers/hash";
 import { loggerAudit } from "@shared/providers/logger";
-import { MEDIA_PATH, NODE_ENV } from "@shared/utils/enviroments";
 
 export class VideoController {
   videoService;
@@ -28,39 +27,30 @@ export class VideoController {
         autorizado: true,
         ativo: true,
       });
+
+      if (!rows) {
+        throw new AppError("Not Video provided", 400);
+      }
+      const { url, tamanho: size } = rows;
+
+      const CHUNK_SIZE = 12 ** 6; // 1MB
+      const start = Number(range.replace(/\D/g, ""));
+      const end = Math.min(start + CHUNK_SIZE, size - 1);
+      const contentLength = end - start + 1;
+
+      const headers = {
+        "Content-Range": `bytes ${start}-${end}/${size}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": contentLength,
+      };
+
+      res.set(headers);
+      const { publicUrl } = await getVideoStream(url);
+      return res.json({ link: publicUrl });
     } catch (error) {
+      console.log(error);
       throw error;
     }
-
-    if (!rows) {
-      throw new AppError("Not Video provided", 400);
-    }
-
-    const { url, mime_type, tamanho: size } = rows;
-
-    const CHUNK_SIZE = 12 ** 6; // 1MB
-    const start = Number(range.replace(/\D/g, ""));
-    const end = Math.min(start + CHUNK_SIZE, size - 1);
-    const contentLength = end - start + 1;
-
-    const headers = {
-      "Content-Range": `bytes ${start}-${end}/${size}`,
-      "Accept-Ranges": "bytes",
-      "Content-Length": contentLength,
-      "Content-Type": mime_type,
-    };
-
-    res.writeHead(206, headers);
-    const path = NODE_ENV === "production" ? MEDIA_PATH : "./tmp/videos";
-    await downloadFileFromBucket({ fileName: url, path: `${path}/${url}` });
-    const stream = streamFile(`${path}/${url}`, { start, end });
-    stream.on("end", () => {
-      if (end === size - 1) {
-        return removeFile(`${path}/${url}`);
-      }
-    });
-
-    stream.pipe(res);
   }
 
   async obter_video(req, res) {
@@ -166,28 +156,17 @@ export class VideoController {
     }
 
     const [{ url }] = rows;
-    const path = NODE_ENV === "production" ? MEDIA_PATH : "./tmp/videos";
     try {
-      await downloadFileFromBucket({ fileName: url, path: `${path}/${url}` });
-      const stream = streamFile(`${path}/${url}`, { start, end });
       res.set({
         "Content-Type": "video/mp4",
         "Content-Disposition": 'attachment; filename="downloadvideo.mp4"',
       });
-      stream.on("error", () => {
-        return res.status(500).json({ message: "Error ao processar video" });
+      const blob = await downloadFileFromBucket({
+        fileName: url,
+        download: true,
       });
-      stream.on("close", async () => {
-        const { err } = await this.videoService.atualizar_contagem(
-          hash_video_id
-        );
-
-        if (err) {
-          return res.status(500).json(err);
-        }
-      });
-
-      stream.pipe(res);
+      res.type(blob.type);
+      res.send(blob);
     } catch (error) {
       throw new AppError("Error ao baixar video");
     }
