@@ -1,10 +1,15 @@
-import { STORAGE_NAME_BUCKET } from "@shared/utils/enviroments";
-import { decode } from "base64-arraybuffer";
+import {
+  STORAGE_NAME_BUCKET,
+  STORAGE_TOKEN,
+  STORAGE_URL,
+} from "@shared/utils/enviroments";
 import dayjs from "dayjs";
 import { existsSync } from "fs";
 import { writeFile } from "fs/promises";
 import { extname } from "path";
+import { Upload } from "tus-js-client";
 import supabase from "./Config";
+
 type UploadParams = {
   fileName?: string;
   file: any;
@@ -20,18 +25,40 @@ export async function UploadFileToBucket({ file }: UploadParams) {
   const prefix = "DA_VIDEO";
   const timestamp = dayjs().unix();
   const filename = `${prefix}_${timestamp}${ext}`;
-  const { data, error } = await supabase.storage
-    .from(STORAGE_NAME_BUCKET)
-    .upload(filename, decode(file.buffer.toString("base64")), {
-      contentType: "video/mp4",
-    });
 
-  if (error) {
-    console.log(error);
-    throw error;
-  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  console.log({ user });
+
+  const upload = new Upload(file.buffer, {
+    endpoint: `${STORAGE_URL}/storage/v1/upload/resumable`, // Replace this with your TUS server endpoint
+    retryDelays: [0, 3000, 5000, 10000, 20000], // Optional: Retry delays in milliseconds
+    headers: {
+      authorization: `Bearer ${STORAGE_TOKEN}`,
+      "x-upsert": "true", // optionally set upsert to true to overwrite existing files
+    },
+    chunkSize: 6 * 1024 * 1024,
+    metadata: {
+      bucketName: STORAGE_NAME_BUCKET,
+      objectName: filename,
+      contentType: file.mimetype,
+    },
+    onError: function (error) {
+      console.log("Failed because: " + error);
+    },
+    onSuccess: function () {
+      console.log("Upload finished:", upload.url);
+    },
+    onProgress: function (bytesUploaded, bytesTotal) {
+      var percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2);
+      console.log(bytesUploaded, bytesTotal, percentage + "%");
+    },
+  });
+
+  // Start the upload
+  upload.start();
 }
-
 export async function downloadFileFromBucket({
   fileName,
   path,
