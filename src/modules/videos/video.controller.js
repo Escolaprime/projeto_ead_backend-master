@@ -174,6 +174,9 @@ export class VideoController {
 
   async upload_video(req, res) {
     const { filename: url, mimetype: mime_type, size: tamanho } = req.file;
+    const { detalhes } = req.body;
+
+    const toObj = JSON.parse(detalhes);
     const timestamp = new Date().getTime().toString();
     const hash_video_id = await generateHash(timestamp, 5);
     try {
