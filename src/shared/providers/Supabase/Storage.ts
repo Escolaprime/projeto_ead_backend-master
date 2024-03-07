@@ -20,17 +20,16 @@ type downloadParams = {
   path: string;
   download: boolean;
 };
-export async function UploadFileToBucket({ file }: UploadParams) {
-  const ext = extname(file.originalname);
+
+export const filename = (originalName: string) => {
+  console.log(originalName);
+  const ext = extname(originalName);
   const prefix = "DA_VIDEO";
   const timestamp = dayjs().unix();
-  const filename = `${prefix}_${timestamp}${ext}`;
+  return `${prefix}_${timestamp}${ext}`;
+};
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  console.log({ user });
-
+export async function UploadFileToBucket({ file, fileName }: UploadParams) {
   const upload = new Upload(file.buffer, {
     endpoint: `${STORAGE_URL}/storage/v1/upload/resumable`, // Replace this with your TUS server endpoint
     retryDelays: [0, 3000, 5000, 10000, 20000], // Optional: Retry delays in milliseconds
@@ -41,7 +40,7 @@ export async function UploadFileToBucket({ file }: UploadParams) {
     chunkSize: 6 * 1024 * 1024,
     metadata: {
       bucketName: STORAGE_NAME_BUCKET,
-      objectName: filename,
+      objectName: fileName,
       contentType: file.mimetype,
     },
     onError: function (error) {

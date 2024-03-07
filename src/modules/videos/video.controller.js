@@ -3,6 +3,7 @@ import { AppError } from "@shared/errors/AppError";
 import {
   UploadFileToBucket,
   downloadFileFromBucket,
+  filename,
   getVideoStream,
 } from "@shared/providers/Supabase/Storage";
 import { generateHash } from "@shared/providers/hash";
@@ -173,14 +174,17 @@ export class VideoController {
   }
 
   async upload_video(req, res) {
-    const { filename: url, mimetype: mime_type, size: tamanho } = req.file;
+    const { mimetype: mime_type, size: tamanho } = req.file;
     const { detalhes } = req.body;
 
     const toObj = JSON.parse(detalhes);
     const timestamp = new Date().getTime().toString();
     const hash_video_id = await generateHash(timestamp, 5);
+    const url = filename(req.file.originalname);
+
     try {
-      await UploadFileToBucket({ file: req.file });
+      await UploadFileToBucket({ file: req.file, fileName: url });
+
       await db.table("videos").insert({
         ...toObj,
         url,
