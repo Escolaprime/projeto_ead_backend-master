@@ -166,7 +166,6 @@ export class VideoController {
         fileName: url,
         download: true,
       });
-      res.type(blob.type);
       res.send(blob);
     } catch (error) {
       throw new AppError("Error ao baixar video");

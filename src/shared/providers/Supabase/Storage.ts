@@ -71,9 +71,6 @@ export async function downloadFileFromBucket({
     .from(STORAGE_NAME_BUCKET)
     .download(`${fileName}`);
 
-  if (download) {
-    return data;
-  }
   if (error) {
     console.log(error);
     throw error;
@@ -81,7 +78,9 @@ export async function downloadFileFromBucket({
   try {
     const arrayBuffer = await data.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    console.log(buffer);
+    if (download) {
+      return buffer;
+    }
     if (path.split(".mp4").length === 0) {
       return writeFile(`${path}.mp4`, buffer);
     }
