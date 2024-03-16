@@ -4,7 +4,8 @@ import {
   STORAGE_URL,
 } from "@shared/utils/enviroments";
 import dayjs from "dayjs";
-import { existsSync } from "fs";
+import ffmpeg from "ffmpeg-static";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { writeFile } from "fs/promises";
 import { extname } from "path";
 import { Upload } from "tus-js-client";
@@ -29,35 +30,6 @@ export const filename = (originalName: string) => {
   return `${prefix}_${timestamp}${ext}`;
 };
 
-export async function UploadFileToBucket({ file, fileName }: UploadParams) {
-  const upload = new Upload(file.buffer, {
-    endpoint: `${STORAGE_URL}/storage/v1/upload/resumable`, // Replace this with your TUS server endpoint
-    retryDelays: [0, 3000, 5000, 10000, 20000], // Optional: Retry delays in milliseconds
-    headers: {
-      authorization: `Bearer ${STORAGE_TOKEN}`,
-      "x-upsert": "true", // optionally set upsert to true to overwrite existing files
-    },
-    chunkSize: 6 * 1024 * 1024,
-    metadata: {
-      bucketName: STORAGE_NAME_BUCKET,
-      objectName: fileName,
-      contentType: file.mimetype,
-    },
-    onError: function (error) {
-      console.log("Failed because: " + error);
-    },
-    onSuccess: function () {
-      console.log("Upload finished:", upload.url);
-    },
-    onProgress: function (bytesUploaded, bytesTotal) {
-      var percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2);
-      console.log(bytesUploaded, bytesTotal, percentage + "%");
-    },
-  });
-
-  // Start the upload
-  upload.start();
-}
 export async function downloadFileFromBucket({
   fileName,
   path,
@@ -106,4 +78,81 @@ export async function getVideoStream(url: string) {
     .getPublicUrl(`${url}`);
 
   return data;
+}
+
+export async function UploadFileToBucket({ file, fileName }: UploadParams) {
+  // Verifica se o arquivo é um vídeo antes de tentar comprimi-lo
+  if (file.mimetype.startsWith("video")) {
+    // Salva o arquivo temporário
+    const videoFilePath = `temp_${fileName}`;
+    writeFileSync(videoFilePath, file.buffer);
+
+    // Comprime o vídeo usando ffmpeg
+    const compressedFilePath = `compressed_${fileName}`;
+    await compressVideo(videoFilePath, compressedFilePath);
+
+    // Cria um novo objeto de arquivo com o vídeo comprimido
+    const compressedFile = {
+      buffer: readFileSync(compressedFilePath),
+      mimetype: file.mimetype,
+    };
+
+    // Remove o arquivo temporário do vídeo original e o arquivo comprimido
+    unlinkSync(videoFilePath);
+    unlinkSync(compressedFilePath);
+
+    // Faz o upload do vídeo comprimido
+    uploadFile(compressedFile, fileName);
+  } else {
+    // Se não for um vídeo, faz o upload do arquivo como está
+    uploadFile(file, fileName);
+  }
+}
+
+// Função para fazer o upload do arquivo
+async function uploadFile(file, fileName) {
+  const upload = new Upload(file.buffer, {
+    endpoint: `${STORAGE_URL}/storage/v1/upload/resumable`,
+    retryDelays: [0, 3000, 5000, 10000, 20000],
+    headers: {
+      authorization: `Bearer ${STORAGE_TOKEN}`,
+      "x-upsert": "true",
+    },
+    chunkSize: 6 * 1024 * 1024,
+    metadata: {
+      bucketName: STORAGE_NAME_BUCKET,
+      objectName: fileName,
+      contentType: file.mimetype,
+    },
+    onError: function (error) {
+      console.log("Failed because: " + error);
+    },
+    onSuccess: function () {
+      console.log("Upload finished:", upload.url);
+    },
+    onProgress: function (bytesUploaded, bytesTotal) {
+      var percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2);
+      console.log(bytesUploaded, bytesTotal, percentage + "%");
+    },
+  });
+
+  // Inicia o upload
+  upload.start();
+}
+
+// Função para comprimir o vídeo usando ffmpeg
+async function compressVideo(inputFilePath, outputFilePath) {
+  try {
+    // Comando ffmpeg para comprimir o vídeo
+    const command = `${ffmpeg} -i ${inputFilePath} -vf "scale=640:trunc(ow/a/2)*2" -c:v libx264 -preset medium -crf 28 ${outputFilePath}`;
+
+    // Executa o comando ffmpeg
+    const { stdout, stderr } = await require("util").promisify(
+      require("child_process").exec
+    )(command);
+
+    console.log("Compression complete");
+  } catch (error) {
+    console.error("Error compressing video:", error);
+  }
 }
