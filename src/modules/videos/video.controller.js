@@ -162,6 +162,7 @@ export class VideoController {
         "Content-Type": "video/mp4",
         "Content-Disposition": 'attachment; filename="downloadvideo.mp4"',
       });
+      await this.videoService.atualizar_contagem(hash_video_id);
       const blob = await downloadFileFromBucket({
         fileName: url,
         download: true,
