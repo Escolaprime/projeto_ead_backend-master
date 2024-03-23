@@ -1,2 +1,4 @@
 import multer from "multer";
-export default multer();
+import { uploadConfig } from "./config";
+
+export default multer(uploadConfig);

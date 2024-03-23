@@ -1,11 +1,12 @@
 import {
+  MEDIA_PATH,
   STORAGE_NAME_BUCKET,
   STORAGE_TOKEN,
   STORAGE_URL,
 } from "@shared/utils/enviroments";
 import dayjs from "dayjs";
 import ffmpeg from "ffmpeg-static";
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, unlinkSync } from "fs";
 import { writeFile } from "fs/promises";
 import { extname } from "path";
 import { Upload } from "tus-js-client";
@@ -83,24 +84,18 @@ export async function getVideoStream(url: string) {
 export async function UploadFileToBucket({ file, fileName }: UploadParams) {
   // Verifica se o arquivo é um vídeo antes de tentar comprimi-lo
   if (file.mimetype.startsWith("video")) {
-    // Salva o arquivo temporário
-    const videoFilePath = `temp_${fileName}`;
-    writeFileSync(videoFilePath, file.buffer);
-
     // Comprime o vídeo usando ffmpeg
-    const compressedFilePath = `compressed_${fileName}`;
-    await compressVideo(videoFilePath, compressedFilePath);
+    const filePath = `${process.cwd()}/${MEDIA_PATH}/${fileName}`;
+    const compressedFilePath = `${process.cwd()}/${MEDIA_PATH}/compressed_${fileName}`;
+    await compressVideo(filePath, compressedFilePath);
 
     // Cria um novo objeto de arquivo com o vídeo comprimido
     const compressedFile = {
       buffer: readFileSync(compressedFilePath),
       mimetype: file.mimetype,
     };
-
-    // Remove o arquivo temporário do vídeo original e o arquivo comprimido
-    unlinkSync(videoFilePath);
+    unlinkSync(filePath);
     unlinkSync(compressedFilePath);
-
     // Faz o upload do vídeo comprimido
     uploadFile(compressedFile, fileName);
   } else {
@@ -145,12 +140,8 @@ async function compressVideo(inputFilePath, outputFilePath) {
   try {
     // Comando ffmpeg para comprimir o vídeo
     const command = `${ffmpeg} -i ${inputFilePath} -vf "scale=640:trunc(ow/a/2)*2" -c:v libx264 -preset medium -crf 28 ${outputFilePath}`;
-
     // Executa o comando ffmpeg
-    const { stdout, stderr } = await require("util").promisify(
-      require("child_process").exec
-    )(command);
-
+    await require("util").promisify(require("child_process").exec)(command);
     console.log("Compression complete");
   } catch (error) {
     console.error("Error compressing video:", error);
