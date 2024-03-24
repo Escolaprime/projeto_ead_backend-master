@@ -1,6 +1,6 @@
 import db from "@shared/database/knex";
 import { AppError } from "@shared/errors/AppError";
-import { UploadFileToBucket, removeVideo } from "@shared/providers/Supabase/Storage";
+import { UploadFileToBucket, getVideoStream, removeVideo } from "@shared/providers/Supabase/Storage";
 import { loggerAudit } from "@shared/providers/logger";
 
 export class AdminController {
